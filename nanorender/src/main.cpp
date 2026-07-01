@@ -13,6 +13,23 @@ extern "C" {
 #define HEIGHT 1200
 
 static uint32_t g_buffer[WIDTH * HEIGHT];
+static float circle_density = 1.0f;
+static bool drawing_line = false;
+static int line_start_x = 0, line_start_y = 0;
+void draw_line(int x0, int y0, int x1, int y1, uint32_t color) {
+  int dx = abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+  int dy = -abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+  int err = dx + dy;
+  while (true) {
+    if (x0 >= 0 && x0 < WIDTH && y0 >= 0 && y0 < HEIGHT) {
+      g_buffer[y0 * WIDTH + x0] = color;
+    }
+    if (x0 == x1 && y0 == y1) break;
+    int e2 = 2 * err;
+    if (e2 >= dy) { err += dy; x0 += sx; }
+    if (e2 <= dx) { err += dx; y0 += sy; }
+  }
+}
 
 int main() {
   struct mfb_window *window =
@@ -32,10 +49,17 @@ int main() {
   UIRenderer renderer(WIDTH, HEIGHT);
 
   // Set up char input callback for textbox input
+static int g_color_shift = 0;
+
+  // Set up char input callback for textbox input
   mfb_set_char_input_callback(
       [](struct mfb_window *w, unsigned int c) {
-        extern void ui_bridge_char_input(struct mfb_window *, unsigned int);
-        ui_bridge_char_input(w, c);
+        if (c == 'r') {
+          g_color_shift = rand() % 255;
+        } else {
+          extern void ui_bridge_char_input(struct mfb_window *, unsigned int);
+          ui_bridge_char_input(w, c);
+        }
       },
       window);
 
@@ -48,14 +72,20 @@ int main() {
       // Simple gradient background
       int x = i % WIDTH;
       int y = i / WIDTH;
-      uint8_t r = (uint8_t)((float)x / WIDTH * 128) + 32;
-      uint8_t g = (uint8_t)((float)y / HEIGHT * 128) + 32;
-      uint8_t b = 64;
+      int cx = WIDTH / 2;
+      int cy = HEIGHT / 2;
+      float dist = sqrt((float)((x - cx) * (x - cx) + (y - cy) * (y - cy))) * circle_density;
+      uint8_t r = (uint8_t)(dist * 0.5f + g_color_shift) % 255;
+      uint8_t g = (uint8_t)(dist * 0.3f + 80) % 255;
+      uint8_t b = (uint8_t)(255 - (dist * 0.4f)) % 255;     
       g_buffer[i] = MFB_RGB(r, g, b);
     }
 
     // 3. UI Logic
     static float slider_val = 50.0f;
+
+    static float circle_density = 1.0f;
+
     static float number_val = 3.14f;
     static int checkbox_a = 0;
     static int checkbox_b = 1;
@@ -79,7 +109,11 @@ int main() {
       if (mu_button(ctx, "mu_button: click me")) {
         quit_requested = false; // just a reaction
       }
-
+      // my new button
+      mu_layout_row(ctx, 1, w1, 0);
+      if (mu_button(ctx, "Say Hello!")) {
+        printf("Hello from my custom button!\n");
+    }
       // checkbox
       mu_layout_row(ctx, 1, w1, 0);
       mu_checkbox(ctx, "mu_checkbox A (off)", &checkbox_a);
@@ -94,6 +128,10 @@ int main() {
       mu_layout_row(ctx, 1, w1, 0);
       mu_label(ctx, "mu_slider (0-100):");
       mu_slider(ctx, &slider_val, 0, 100);
+      // my circle density slider
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_label(ctx, "Circle density:");
+      mu_slider(ctx, &circle_density, 0.1f, 5.0f);
 
       // number
       mu_layout_row(ctx, 1, w1, 0);
@@ -170,6 +208,18 @@ int main() {
     }
 
     mu_end(ctx);
+    // Part 6: Interactive line drawing
+    if (ctx->mouse_down == MU_MOUSE_LEFT && !drawing_line) {
+  // mouse just pressed
+      drawing_line = true;
+      line_start_x = ctx->mouse_pos.x;
+      line_start_y = ctx->mouse_pos.y;
+    }
+    if (drawing_line && ctx->mouse_down != MU_MOUSE_LEFT) {
+  // mouse released - finalize the line
+     draw_line(line_start_x, line_start_y, ctx->mouse_pos.x, ctx->mouse_pos.y, MFB_RGB(255, 255, 255));
+     drawing_line = false;
+  }
 
     if (quit_requested) {
       mfb_close(window);
