@@ -66,7 +66,7 @@ To keep the repository clean and the reports professional, follow these standard
 ## Table of Contents
 | Assignment | Link |
 | :--- | :--- |
-| **Project 1: My First Project** | [View Folder](./MyFirstProject/) |
+| **HW1: Basic Graphics and Immediate Mode GUI** | [View Report](./nanorender/hw1_report.md) |
 
 ---
 *Note: Please ensure all internal links remain functional as you add new folders.*
