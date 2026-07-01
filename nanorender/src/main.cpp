@@ -13,6 +13,7 @@ extern "C" {
 #define HEIGHT 1200
 
 static uint32_t g_buffer[WIDTH * HEIGHT];
+static uint32_t g_line_buffer[WIDTH * HEIGHT] = {0};
 static float circle_density = 1.0f;
 static bool drawing_line = false;
 static int line_start_x = 0, line_start_y = 0;
@@ -22,7 +23,7 @@ void draw_line(int x0, int y0, int x1, int y1, uint32_t color) {
   int err = dx + dy;
   while (true) {
     if (x0 >= 0 && x0 < WIDTH && y0 >= 0 && y0 < HEIGHT) {
-      g_buffer[y0 * WIDTH + x0] = color;
+      g_line_buffer[y0 * WIDTH + x0] = color;
     }
     if (x0 == x1 && y0 == y1) break;
     int e2 = 2 * err;
@@ -80,18 +81,22 @@ static int g_color_shift = 0;
       uint8_t b = (uint8_t)(255 - (dist * 0.4f)) % 255;     
       g_buffer[i] = MFB_RGB(r, g, b);
     }
+    // Merge line buffer
+    for (int i = 0; i < WIDTH * HEIGHT; i++) {
+      if (g_line_buffer[i] != 0) {
+        g_buffer[i] = g_line_buffer[i];
+      }
+    }
 
     // 3. UI Logic
+  
+
     static float slider_val = 50.0f;
-
-    static float circle_density = 1.0f;
-
     static float number_val = 3.14f;
     static int checkbox_a = 0;
     static int checkbox_b = 1;
     static char textbox_buf[128] = "edit me";
     static bool quit_requested = false;
-
     mu_begin(ctx);
 
     // --- Widgets window ---
