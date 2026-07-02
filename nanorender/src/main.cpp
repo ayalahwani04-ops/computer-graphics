@@ -8,6 +8,7 @@
 #include <sstream>
 #include <vector>
 #include <string>
+#include <algorithm>
 
 extern "C" {
 #include "microui.h"
@@ -66,6 +67,31 @@ void load_obj(const char* filename) {
     }
     printf("Loaded: %zu vertices, %zu faces\n", g_vertices.size(), g_faces.size());
 }
+void normalize_mesh(float screen_width, float screen_height) {
+    if (g_vertices.empty()) return;
+
+    float min_x = g_vertices[0].x, max_x = g_vertices[0].x;
+    float min_y = g_vertices[0].y, max_y = g_vertices[0].y;
+
+    for (auto& v : g_vertices) {
+        min_x = std::min(min_x, v.x); max_x = std::max(max_x, v.x);
+        min_y = std::min(min_y, v.y); max_y = std::max(max_y, v.y);
+    }
+
+    float range_x = max_x - min_x;
+    float range_y = max_y - min_y;
+    float scale = 0.7f * std::min(screen_width / range_x, screen_height / range_y);
+
+    float cx = (min_x + max_x) / 2.0f;
+    float cy = (min_y + max_y) / 2.0f;
+
+    for (auto& v : g_vertices) {
+        v.x = (v.x - cx) * scale + screen_width / 2.0f;
+        v.y = (v.y - cy) * scale + screen_height / 2.0f;
+        v.z = v.z * scale;
+    }
+    printf("Normalized mesh to fit screen!\n");
+}
 
 int main() {
   // GLM demo - Part 0
@@ -73,6 +99,7 @@ int main() {
   glm::mat4 transform = glm::translate(glm::mat4(1.0f), position);
   printf("GLM works! Position: (%.1f, %.1f, %.1f)\n", position.x, position.y, position.z);
   load_obj("cube.obj");
+  normalize_mesh(WIDTH, HEIGHT);
   struct mfb_window *window =
       mfb_open_ex("MiniGUI Platform", WIDTH, HEIGHT, MFB_WF_RESIZABLE);
   if (!window)
