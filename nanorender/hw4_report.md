@@ -9,3 +9,9 @@ I also fixed the coordinate pipeline in this assignment — vertices are now kep
 
 ![Part 1 - Bounding Box](./assets/part1_bbox.png)
 
+## Part 2: Triangle Filling with Barycentric Coordinates
+I implemented triangle filling using Barycentric Coordinates. For each pixel inside the bounding box, I calculate three weights (alpha, beta, gamma). If all three are >= 0, the pixel is inside the triangle and gets colored.
+
+The result shows a solid colored cube, but with visible artifacts — some back-facing triangles are drawn on top of front-facing ones (the Painter's Algorithm problem). This will be fixed in Part 3 with the Z-Buffer.
+
+![Part 2 - Filled Triangles](./assets/part2_filled.png)

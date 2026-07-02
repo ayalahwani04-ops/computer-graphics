@@ -29,6 +29,7 @@ static float cam_rx = 0, cam_ry = 0;
 static int show_axes = 0;
 static int show_bbox = 0;
 static int show_bbox_raster = 0;
+static int show_filled = 0;
 static float world_tx = 0, world_ty = 0;
 static float world_ry = 0;
 static float local_sx = 1, local_sy = 1;
@@ -297,6 +298,45 @@ glm::mat4 final_transform = proj * view * world * local;
                     g_buffer[y * WIDTH + x] = color;
         }
     }
+    // hw4 Part 2: Triangle filling with Barycentric Coordinates
+    if (show_filled) {
+        srand(42);
+        for (auto& face : g_faces) {
+            Vec3& v0 = g_vertices[face.a];
+            Vec3& v1 = g_vertices[face.b];
+            Vec3& v2 = g_vertices[face.c];
+
+            glm::vec4 c0 = final_transform * glm::vec4(v0.x, v0.y, v0.z, 1.0f);
+            glm::vec4 c1 = final_transform * glm::vec4(v1.x, v1.y, v1.z, 1.0f);
+            glm::vec4 c2 = final_transform * glm::vec4(v2.x, v2.y, v2.z, 1.0f);
+            if (c0.w <= 0 || c1.w <= 0 || c2.w <= 0) continue;
+
+            glm::vec2 s0 = to_screen(c0);
+            glm::vec2 s1 = to_screen(c1);
+            glm::vec2 s2 = to_screen(c2);
+
+            int minX = std::max(0, (int)std::min({s0.x, s1.x, s2.x}));
+            int maxX = std::min(WIDTH-1, (int)std::max({s0.x, s1.x, s2.x}));
+            int minY = std::max(0, (int)std::min({s0.y, s1.y, s2.y}));
+            int maxY = std::min(HEIGHT-1, (int)std::max({s0.y, s1.y, s2.y}));
+
+            uint32_t color = MFB_RGB(rand()%255, rand()%255, rand()%255);
+
+            float denom = (s1.y - s2.y) * (s0.x - s2.x) + (s2.x - s1.x) * (s0.y - s2.y);
+            if (abs(denom) < 0.0001f) continue;
+
+            for (int y = minY; y <= maxY; y++) {
+                for (int x = minX; x <= maxX; x++) {
+                    float alpha = ((s1.y - s2.y) * (x - s2.x) + (s2.x - s1.x) * (y - s2.y)) / denom;
+                    float beta  = ((s2.y - s0.y) * (x - s2.x) + (s0.x - s2.x) * (y - s2.y)) / denom;
+                    float gamma = 1.0f - alpha - beta;
+                    if (alpha >= 0 && beta >= 0 && gamma >= 0) {
+                        g_buffer[y * WIDTH + x] = color;
+                    }
+                }
+            }
+        }
+    }
     // Part 1: Draw coordinate axes
     if (show_axes)
 {
@@ -458,6 +498,8 @@ if (c.w > 0 && tip.w > 0)
       mu_label(ctx, "-- hw4 Rasterization --");
       mu_layout_row(ctx, 1, w1, 0);
       mu_checkbox(ctx, "Show BBox Raster", &show_bbox_raster);
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_checkbox(ctx, "Show Filled", &show_filled);
 
       // number
       mu_layout_row(ctx, 1, w1, 0);
