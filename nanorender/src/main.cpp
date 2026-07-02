@@ -15,7 +15,19 @@ extern "C" {
 }
 #include "ui_bridge.h"
 #include "ui_renderer.h"
+struct PointLight {
+    glm::vec3 position;
+    glm::vec3 ambient;
+    glm::vec3 diffuse;
+    glm::vec3 specular;
+};
 
+struct Material {
+    glm::vec3 ambient;
+    glm::vec3 diffuse;
+    glm::vec3 specular;
+    float shininess;
+};
 #define WIDTH 1600
 #define HEIGHT 1200
 
@@ -35,6 +47,22 @@ static int show_filled = 0;
 static float world_tx = 0, world_ty = 0;
 static float world_ry = 0;
 static float local_sx = 1, local_sy = 1;
+static PointLight g_light = {
+    glm::vec3(2.0f, 2.0f, 2.0f),
+    glm::vec3(0.2f, 0.2f, 0.2f),
+    glm::vec3(1.0f, 1.0f, 1.0f),
+    glm::vec3(1.0f, 1.0f, 1.0f)
+};
+
+static Material g_material = {
+    glm::vec3(1.0f, 0.5f, 0.3f),
+    glm::vec3(1.0f, 0.5f, 0.3f),
+    glm::vec3(0.5f, 0.5f, 0.5f),
+    32.0f
+};
+
+static float light_x = 2.0f, light_y = 2.0f, light_z = 2.0f;
+static int show_phong = 0;
 static bool drawing_line = false;
 static int line_start_x = 0, line_start_y = 0;
 void draw_line(int x0, int y0, int x1, int y1, uint32_t color) {
@@ -256,7 +284,8 @@ else
         -600.0f, 600.0f,
         0.1f, 10000.0f);
 }
-
+// Update light position from sliders
+    g_light.position = glm::vec3(light_x, light_y, light_z);
 glm::mat4 final_transform = proj * view * world * local;
     for (auto& face : g_faces) {
         Vec3& v0 = g_vertices[face.a];
@@ -513,6 +542,17 @@ if (c.w > 0 && tip.w > 0)
       mu_layout_row(ctx, 1, w1, 0);
       mu_checkbox(ctx, "Show Bounding Box", &show_bbox);
       mu_layout_row(ctx, 1, w1, 0);
+      // hw5 Part 1: Light controls
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_label(ctx, "-- Light Position --");
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_slider(ctx, &light_x, -10.0f, 10.0f);
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_slider(ctx, &light_y, -10.0f, 10.0f);
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_slider(ctx, &light_z, -10.0f, 10.0f);
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_checkbox(ctx, "Show Phong", &show_phong);
       mu_label(ctx, "-- hw4 Rasterization --");
       mu_layout_row(ctx, 1, w1, 0);
       mu_checkbox(ctx, "Show BBox Raster", &show_bbox_raster);
