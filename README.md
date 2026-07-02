@@ -68,5 +68,8 @@ To keep the repository clean and the reports professional, follow these standard
 | :--- | :--- |
 | **HW1: Basic Graphics and Immediate Mode GUI** | [View Report](./nanorender/hw1_report.md) |
 
+| **HW2: Wireframe Viewer and Geometric Transformations** | [View Report](./nanorender/hw2_report.md) |
+
+
 ---
 *Note: Please ensure all internal links remain functional as you add new folders.*
