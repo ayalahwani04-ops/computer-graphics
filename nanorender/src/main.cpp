@@ -63,6 +63,8 @@ static Material g_material = {
 
 static float light_x = 2.0f, light_y = 2.0f, light_z = 2.0f;
 static int show_phong = 0;
+static int show_flat_shading = 0;
+
 static bool drawing_line = false;
 static int line_start_x = 0, line_start_y = 0;
 void draw_line(int x0, int y0, int x1, int y1, uint32_t color) {
@@ -303,6 +305,70 @@ glm::mat4 final_transform = proj * view * world * local;
         draw_line_bg((int)s0.x, (int)s0.y, (int)s1.x, (int)s1.y, MFB_RGB(255, 255, 255));
         draw_line_bg((int)s1.x, (int)s1.y, (int)s2.x, (int)s2.y, MFB_RGB(255, 255, 255));
         draw_line_bg((int)s2.x, (int)s2.y, (int)s0.x, (int)s0.y, MFB_RGB(255, 255, 255));
+    }
+    // hw5 Part 2: Flat shading with diffuse lighting
+    if (show_flat_shading) {
+        for (int fi = 0; fi < (int)g_faces.size(); fi++) {
+            Vec3& v0 = g_vertices[g_faces[fi].a];
+            Vec3& v1 = g_vertices[g_faces[fi].b];
+            Vec3& v2 = g_vertices[g_faces[fi].c];
+
+            glm::vec4 c0 = final_transform * glm::vec4(v0.x, v0.y, v0.z, 1.0f);
+            glm::vec4 c1 = final_transform * glm::vec4(v1.x, v1.y, v1.z, 1.0f);
+            glm::vec4 c2 = final_transform * glm::vec4(v2.x, v2.y, v2.z, 1.0f);
+            if (c0.w <= 0 || c1.w <= 0 || c2.w <= 0) continue;
+
+            glm::vec2 s0 = to_screen(c0);
+            glm::vec2 s1 = to_screen(c1);
+            glm::vec2 s2 = to_screen(c2);
+
+            // Face normal and center in world space
+            glm::vec3 normal = glm::vec3(g_face_normals[fi].x, g_face_normals[fi].y, g_face_normals[fi].z);
+            glm::vec3 center = g_face_centers[fi];
+
+            // Light direction
+            glm::vec3 light_dir = glm::normalize(g_light.position - center);
+
+            // Ambient
+            glm::vec3 ambient = g_light.ambient * g_material.ambient;
+
+            // Diffuse
+            float diff = std::max(glm::dot(normal, light_dir), 0.0f);
+            glm::vec3 diffuse = diff * g_light.diffuse * g_material.diffuse;
+
+            glm::vec3 result = ambient + diffuse;
+            result = glm::clamp(result, 0.0f, 1.0f);
+
+            uint32_t color = MFB_RGB(
+                (uint8_t)(result.r * 255),
+                (uint8_t)(result.g * 255),
+                (uint8_t)(result.b * 255)
+            );
+
+            int minX = std::max(0, (int)std::min({s0.x, s1.x, s2.x}));
+            int maxX = std::min(WIDTH-1, (int)std::max({s0.x, s1.x, s2.x}));
+            int minY = std::max(0, (int)std::min({s0.y, s1.y, s2.y}));
+            int maxY = std::min(HEIGHT-1, (int)std::max({s0.y, s1.y, s2.y}));
+
+            float denom = (s1.y - s2.y) * (s0.x - s2.x) + (s2.x - s1.x) * (s0.y - s2.y);
+            if (abs(denom) < 0.0001f) continue;
+
+            for (int y = minY; y <= maxY; y++) {
+                for (int x = minX; x <= maxX; x++) {
+                    float alpha = ((s1.y - s2.y) * (x - s2.x) + (s2.x - s1.x) * (y - s2.y)) / denom;
+                    float beta  = ((s2.y - s0.y) * (x - s2.x) + (s0.x - s2.x) * (y - s2.y)) / denom;
+                    float gamma = 1.0f - alpha - beta;
+                    if (alpha >= 0 && beta >= 0 && gamma >= 0) {
+                        float z = alpha * (c0.z/c0.w) + beta * (c1.z/c1.w) + gamma * (c2.z/c2.w);
+                        int idx = y * WIDTH + x;
+                        if (z < g_zbuffer[idx]) {
+                            g_zbuffer[idx] = z;
+                            g_buffer[idx] = color;
+                        }
+                    }
+                }
+            }
+        }
     }
     // hw4 Part 1: Bounding box rasterization
     if (show_bbox_raster) {
@@ -553,6 +619,8 @@ if (c.w > 0 && tip.w > 0)
       mu_slider(ctx, &light_z, -10.0f, 10.0f);
       mu_layout_row(ctx, 1, w1, 0);
       mu_checkbox(ctx, "Show Phong", &show_phong);
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_checkbox(ctx, "Show Flat Shading", &show_flat_shading);
       mu_label(ctx, "-- hw4 Rasterization --");
       mu_layout_row(ctx, 1, w1, 0);
       mu_checkbox(ctx, "Show BBox Raster", &show_bbox_raster);

@@ -5,3 +5,10 @@ I created a `PointLight` struct with position and ambient/diffuse/specular color
 
 ![Part 1 - Ambient Setup](./assets/part1_ambient.png)
 
+## Part 2: Flat Shading (Diffuse Lighting)
+I implemented flat shading using Lambert's Cosine Law. For each triangle, I calculate the dot product between the face normal and the light direction vector. A higher dot product (face pointing toward light) gives a brighter color. I add this diffuse component to the ambient component.
+
+The result shows the cube with realistic shading — faces pointing toward the light are bright orange, while faces pointing away are dark. Moving the light position sliders changes the shading in real time.
+
+![Part 2 - Flat Shading](./assets/part2_flat_shading.png)
+
