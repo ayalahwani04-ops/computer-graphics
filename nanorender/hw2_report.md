@@ -14,3 +14,7 @@ I wrote a `load_obj` function that reads `.obj` files line by line. Lines starti
 I wrote a `normalize_mesh` function that finds the bounding box of the mesh by scanning all vertices for min/max x and y values. Then I calculated a uniform scale factor by dividing the screen size by the mesh range, taking the smaller of the two axes to ensure the mesh fits in both dimensions. Finally I translated the mesh center to the screen center so the model always appears centered regardless of its original coordinates.
 
 ![Part 2 - Normalize](./assets/part2_normalize.png)
+## Part 3: Orthographic Projection and Wireframe Rendering
+I iterated over all the faces in the mesh. For each triangle, I retrieved its three vertices and dropped the z coordinate to project them onto the 2D screen (orthographic projection). Then I drew the three edges of each triangle using the `draw_line_bg` function. The result is a white wireframe cube visible on the colorful background.
+
+![Part 3 - Wireframe](./assets/part3_wireframe.png)

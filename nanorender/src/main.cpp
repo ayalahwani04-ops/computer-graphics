@@ -38,6 +38,19 @@ void draw_line(int x0, int y0, int x1, int y1, uint32_t color) {
     if (e2 <= dx) { err += dx; y0 += sy; }
   }
 }
+void draw_line_bg(int x0, int y0, int x1, int y1, uint32_t color) {
+    int dx = abs(x1-x0), sx = x0<x1 ? 1 : -1;
+    int dy = -abs(y1-y0), sy = y0<y1 ? 1 : -1;
+    int err = dx+dy;
+    while(true) {
+        if(x0>=0 && x0<WIDTH && y0>=0 && y0<HEIGHT)
+            g_buffer[y0*WIDTH+x0] = color;
+        if(x0==x1 && y0==y1) break;
+        int e2 = 2*err;
+        if(e2>=dy){err+=dy; x0+=sx;}
+        if(e2<=dx){err+=dx; y0+=sy;}
+    }
+}
 // 3D data structures
 struct Vec3 { float x, y, z; };
 struct Face { int a, b, c; };
@@ -153,6 +166,25 @@ static int g_color_shift = 0;
       if (g_line_buffer[i] != 0) {
         g_buffer[i] = g_line_buffer[i];
       }
+    }
+    // Part 3: Draw wireframe
+    for (auto& face : g_faces) {
+        Vec3& v0 = g_vertices[face.a];
+        Vec3& v1 = g_vertices[face.b];
+        Vec3& v2 = g_vertices[face.c];
+        draw_line_bg((int)v0.x, (int)v0.y, (int)v1.x, (int)v1.y, MFB_RGB(255, 255, 255));
+        draw_line_bg((int)v1.x, (int)v1.y, (int)v2.x, (int)v2.y, MFB_RGB(255, 255, 255));
+        draw_line_bg((int)v2.x, (int)v2.y, (int)v0.x, (int)v0.y, MFB_RGB(255, 255, 255));
+    }
+      // Part 3: Draw wireframe
+    for (auto& face : g_faces) {
+        Vec3& v0 = g_vertices[face.a];
+        Vec3& v1 = g_vertices[face.b];
+        Vec3& v2 = g_vertices[face.c];
+    // Orthographic projection - just drop z
+        draw_line((int)v0.x, (int)v0.y, (int)v1.x, (int)v1.y, MFB_RGB(255, 255, 255));
+        draw_line((int)v1.x, (int)v1.y, (int)v2.x, (int)v2.y, MFB_RGB(255, 255, 255));
+        draw_line((int)v2.x, (int)v2.y, (int)v0.x, (int)v0.y, MFB_RGB(255, 255, 255));
     }
 
     // 3. UI Logic
