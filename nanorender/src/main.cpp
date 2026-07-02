@@ -21,6 +21,8 @@ extern "C" {
 
 static uint32_t g_buffer[WIDTH * HEIGHT];
 static uint32_t g_line_buffer[WIDTH * HEIGHT] = {0};
+static float g_zbuffer[WIDTH * HEIGHT];
+static int show_zbuffer = 0;
 static float circle_density = 1.0f; 
 static int show_normals = 0; 
 static int use_perspective = 0;
@@ -199,7 +201,9 @@ static int g_color_shift = 0;
   while (mfb_update_events(window) != MFB_STATE_EXIT) {
     // 1. Input
     ui_bridge_input(ctx, window);
-
+    // Clear Z-buffer
+    for (int i = 0; i < WIDTH * HEIGHT; i++)
+        g_zbuffer[i] = 1e30f;
     // 2. Scene Rendering (Background)
     for (int i = 0; i < WIDTH * HEIGHT; i++) {
       // Simple gradient background
@@ -298,7 +302,7 @@ glm::mat4 final_transform = proj * view * world * local;
                     g_buffer[y * WIDTH + x] = color;
         }
     }
-    // hw4 Part 2: Triangle filling with Barycentric Coordinates
+    // hw4 Part 2+3: Triangle filling with Barycentric Coordinates and Z-Buffer
     if (show_filled) {
         srand(42);
         for (auto& face : g_faces) {
@@ -314,6 +318,10 @@ glm::mat4 final_transform = proj * view * world * local;
             glm::vec2 s0 = to_screen(c0);
             glm::vec2 s1 = to_screen(c1);
             glm::vec2 s2 = to_screen(c2);
+
+            float z0 = c0.z / c0.w;
+            float z1 = c1.z / c1.w;
+            float z2 = c2.z / c2.w;
 
             int minX = std::max(0, (int)std::min({s0.x, s1.x, s2.x}));
             int maxX = std::min(WIDTH-1, (int)std::max({s0.x, s1.x, s2.x}));
@@ -331,7 +339,17 @@ glm::mat4 final_transform = proj * view * world * local;
                     float beta  = ((s2.y - s0.y) * (x - s2.x) + (s0.x - s2.x) * (y - s2.y)) / denom;
                     float gamma = 1.0f - alpha - beta;
                     if (alpha >= 0 && beta >= 0 && gamma >= 0) {
-                        g_buffer[y * WIDTH + x] = color;
+                        float z = alpha * z0 + beta * z1 + gamma * z2;
+                        int idx = y * WIDTH + x;
+                        if (z < g_zbuffer[idx]) {
+                            g_zbuffer[idx] = z;
+                            if (!show_zbuffer)
+                                g_buffer[idx] = color;
+                            else {
+                                uint8_t gz = (uint8_t)((z + 1.0f) * 0.5f * 255);
+                                g_buffer[idx] = MFB_RGB(gz, gz, gz);
+                            }
+                        }
                     }
                 }
             }
@@ -500,6 +518,8 @@ if (c.w > 0 && tip.w > 0)
       mu_checkbox(ctx, "Show BBox Raster", &show_bbox_raster);
       mu_layout_row(ctx, 1, w1, 0);
       mu_checkbox(ctx, "Show Filled", &show_filled);
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_checkbox(ctx, "Show ZBuffer", &show_zbuffer);
 
       // number
       mu_layout_row(ctx, 1, w1, 0);

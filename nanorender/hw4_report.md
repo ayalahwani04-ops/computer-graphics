@@ -15,3 +15,11 @@ I implemented triangle filling using Barycentric Coordinates. For each pixel ins
 The result shows a solid colored cube, but with visible artifacts — some back-facing triangles are drawn on top of front-facing ones (the Painter's Algorithm problem). This will be fixed in Part 3 with the Z-Buffer.
 
 ![Part 2 - Filled Triangles](./assets/part2_filled.png)
+
+## Part 3: The Z-Buffer Algorithm
+I added a Z-buffer — a float array the same size as the color buffer, initialized to a very large number each frame. For each pixel, I interpolate the depth using barycentric coordinates (z = alpha*z0 + beta*z1 + gamma*z2). If the new depth is less than the stored value, I update both the color buffer and Z-buffer.
+
+The result is a perfectly solid cube with correct depth ordering — front faces correctly occlude back faces. The Z-buffer visualization shows the cube in grayscale — white means close to the camera.
+
+![Part 3 - Color Buffer](./assets/part3_zbuffer_color.png)
+![Part 3 - Depth Buffer](./assets/part3_zbuffer_depth.png)
