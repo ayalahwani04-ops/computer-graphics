@@ -21,7 +21,9 @@ extern "C" {
 
 static uint32_t g_buffer[WIDTH * HEIGHT];
 static uint32_t g_line_buffer[WIDTH * HEIGHT] = {0};
-static float circle_density = 1.0f;   
+static float circle_density = 1.0f;  
+static float cam_x = 0, cam_y = 0, cam_z = 5.0f;
+static float cam_rx = 0, cam_ry = 0; 
 static int show_axes = 0;
 static int show_bbox = 0;
 static float world_tx = 0, world_ty = 0;
@@ -191,7 +193,13 @@ static int g_color_shift = 0;
     world = glm::rotate(world, world_ry, glm::vec3(0, 1, 0));
     world = glm::translate(world, glm::vec3(world_tx, world_ty, 0));
 
-    glm::mat4 final_transform = world * local;
+    // Part 2: View matrix (camera)
+    glm::mat4 view = glm::mat4(1.0f);
+    view = glm::rotate(view, -cam_rx, glm::vec3(1, 0, 0));
+    view = glm::rotate(view, -cam_ry, glm::vec3(0, 1, 0));
+    view = glm::translate(view, glm::vec3(-cam_x, -cam_y, -cam_z));
+
+    glm::mat4 final_transform = view * world * local;
 
     for (auto& face : g_faces) {
         Vec3& v0 = g_vertices[face.a];
@@ -257,6 +265,22 @@ static int g_color_shift = 0;
       mu_layout_row(ctx, 1, w1, 0);
       mu_checkbox(ctx, "mu_checkbox A (off)", &checkbox_a);
       mu_checkbox(ctx, "mu_checkbox B (on)", &checkbox_b);
+      
+          // Part 2: Camera controls
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_label(ctx, "-- Camera Position --");
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_slider(ctx, &cam_x, -1000, 1000);
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_slider(ctx, &cam_y, -1000, 1000);
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_slider(ctx, &cam_y, -1000, 1000);
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_label(ctx, "-- Camera Rotation --");
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_slider(ctx, &cam_rx, -3.14f, 3.14f);
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_slider(ctx, &cam_ry, -3.14f, 3.14f);
 
       // textbox
       mu_layout_row(ctx, 1, w1, 0);
