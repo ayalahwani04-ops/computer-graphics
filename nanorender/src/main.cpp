@@ -22,6 +22,7 @@ extern "C" {
 static uint32_t g_buffer[WIDTH * HEIGHT];
 static uint32_t g_line_buffer[WIDTH * HEIGHT] = {0};
 static float circle_density = 1.0f;  
+static int use_perspective = 0;
 static float cam_x = 0, cam_y = 0, cam_z = 5.0f;
 static float cam_rx = 0, cam_ry = 0; 
 static int show_axes = 0;
@@ -199,7 +200,12 @@ static int g_color_shift = 0;
     view = glm::rotate(view, -cam_ry, glm::vec3(0, 1, 0));
     view = glm::translate(view, glm::vec3(-cam_x, -cam_y, -cam_z));
 
-    glm::mat4 final_transform = view * world * local;
+   // Part 3: Projection matrix
+    glm::mat4 proj = glm::mat4(1.0f);
+    if (use_perspective) {
+        proj = glm::perspective(glm::radians(60.0f), (float)WIDTH / HEIGHT, 0.1f, 10000.0f);
+    }
+    glm::mat4 final_transform = proj * view * world * local;
 
     for (auto& face : g_faces) {
         Vec3& v0 = g_vertices[face.a];
@@ -281,6 +287,9 @@ static int g_color_shift = 0;
       mu_slider(ctx, &cam_rx, -3.14f, 3.14f);
       mu_layout_row(ctx, 1, w1, 0);
       mu_slider(ctx, &cam_ry, -3.14f, 3.14f);
+      // Part 3: Projection toggle
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_checkbox(ctx, "Perspective Projection", &use_perspective);
 
       // textbox
       mu_layout_row(ctx, 1, w1, 0);

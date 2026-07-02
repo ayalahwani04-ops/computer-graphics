@@ -10,3 +10,9 @@ I added two debug checkboxes to the UI — "Show Axes" and "Show Bounding Box". 
 I created a camera with position (x, y, z) and rotation (rx, ry) properties controlled by GUI sliders. The View matrix applies the inverse of the camera's transformation to all vertices — moving the camera left shifts the world right. I multiply the matrices as: View * World * Local * vertex. When I rotate the camera, the cube appears to rotate in 3D space.
 
 ![Part 2 - Camera](./assets/part2_camera.png)
+
+## Part 3: Perspective Projection
+I used GLM's `glm::perspective` function to create a perspective projection matrix with 60° FOV, the window's aspect ratio, and near/far clipping planes of 0.1 and 10000. I added a checkbox to toggle between orthographic and perspective modes. In perspective mode, objects further away appear smaller, creating a realistic depth effect. The matrix multiplication order is: Projection * View * World * Local * vertex.
+
+![Part 3 - Orthographic](./assets/part3_ortho.png)
+![Part 3 - Perspective](./assets/part3_perspective.png)
