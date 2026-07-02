@@ -21,7 +21,8 @@ extern "C" {
 
 static uint32_t g_buffer[WIDTH * HEIGHT];
 static uint32_t g_line_buffer[WIDTH * HEIGHT] = {0};
-static float circle_density = 1.0f;  
+static float circle_density = 1.0f; 
+static int show_normals = 0; 
 static int use_perspective = 0;
 static float cam_x = 0, cam_y = 0, cam_z = 5.0f;
 static float cam_rx = 0, cam_ry = 0; 
@@ -113,6 +114,30 @@ void normalize_mesh(float screen_width, float screen_height) {
     }
     printf("Normalized mesh to fit screen!\n");
 }
+struct Normal { float x, y, z; };
+std::vector<Normal> g_face_normals;
+std::vector<glm::vec3> g_face_centers;
+
+void compute_normals() {
+    g_face_normals.clear();
+    g_face_centers.clear();
+    for (auto& face : g_faces) {
+        Vec3& v0 = g_vertices[face.a];
+        Vec3& v1 = g_vertices[face.b];
+        Vec3& v2 = g_vertices[face.c];
+
+        glm::vec3 edge1(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z);
+        glm::vec3 edge2(v2.x - v0.x, v2.y - v0.y, v2.z - v0.z);
+        glm::vec3 normal = glm::normalize(glm::cross(edge1, edge2));
+
+        g_face_normals.push_back({normal.x, normal.y, normal.z});
+        g_face_centers.push_back(glm::vec3(
+            (v0.x + v1.x + v2.x) / 3.0f,
+            (v0.y + v1.y + v2.y) / 3.0f,
+            (v0.z + v1.z + v2.z) / 3.0f
+        ));
+    }
+}
 
 int main() {
   // GLM demo - Part 0
@@ -121,6 +146,7 @@ int main() {
   printf("GLM works! Position: (%.1f, %.1f, %.1f)\n", position.x, position.y, position.z);
   load_obj("cube.obj");
   normalize_mesh(WIDTH, HEIGHT);
+  compute_normals();
   struct mfb_window *window =
       mfb_open_ex("MiniGUI Platform", WIDTH, HEIGHT, MFB_WF_RESIZABLE);
   if (!window)
@@ -230,6 +256,22 @@ static int g_color_shift = 0;
         draw_line_bg((int)origin.x, (int)origin.y, (int)y_axis.x, (int)y_axis.y, MFB_RGB(0, 255, 0));
         draw_line_bg((int)origin.x, (int)origin.y, (int)z_axis.x, (int)z_axis.y, MFB_RGB(0, 0, 255));
       }
+      // Part 4: Draw face normals
+    // Part 4: Draw face normals
+    if (show_normals) {
+      for (int i = 0; i < (int)g_faces.size(); i++) {
+         
+
+        glm::vec3 center = g_face_centers[i];
+        glm::vec4 c = final_transform * glm::vec4(center, 1.0f);
+        glm::vec4 tip = final_transform * glm::vec4(
+            center.x + g_face_normals[i].x * 200,
+            center.y + g_face_normals[i].y * 200,
+            center.z + g_face_normals[i].z * 200,
+            1.0f);
+        draw_line_bg((int)c.x, (int)c.y, (int)tip.x, (int)tip.y, MFB_RGB(255, 255, 0));
+    }
+}
 
     // 3. UI Logic
   
@@ -290,6 +332,8 @@ static int g_color_shift = 0;
       // Part 3: Projection toggle
       mu_layout_row(ctx, 1, w1, 0);
       mu_checkbox(ctx, "Perspective Projection", &use_perspective);
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_checkbox(ctx, "Show Normals", &show_normals);
 
       // textbox
       mu_layout_row(ctx, 1, w1, 0);
