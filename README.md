@@ -74,6 +74,8 @@ To keep the repository clean and the reports professional, follow these standard
 
 | **HW4: Triangle Rasterization and Depth Buffering** | [View Report](./nanorender/hw4_report.md) |
 
+| **HW5: Lighting, Materials, and Shading** | [View Report](./nanorender/hw5_report.md) |
+
 
 ---
 *Note: Please ensure all internal links remain functional as you add new folders.*
