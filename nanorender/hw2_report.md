@@ -24,3 +24,9 @@ I iterated over all the faces in the mesh. For each triangle, I retrieved its th
 I added new GUI sliders to control World Translation (X, Y), World Rotation Y, and Local Scale (X, Y). Each slider is bound to a static variable that will be used to compute the transformation matrices in Part 5.
 
 ![Part 4 - GUI Layout](./assets/part4_gui.png)
+
+## Part 5: Applying Transformations
+I used GLM to build transformation matrices from the slider values. The local matrix applies scale first, then the world matrix applies rotation and translation. The final matrix is `world * local`. When I translate first in local space then rotate in world space, the cube moves to a position and then rotates around the world origin. When I rotate first then translate in world space, the cube spins in place and then moves.
+
+![Part 5 - Transform 1](./assets/part5_transform1.png)
+![Part 5 - Transform 2](./assets/part5_transform2.png)
