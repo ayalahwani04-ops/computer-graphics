@@ -30,3 +30,8 @@ I used GLM to build transformation matrices from the slider values. The local ma
 
 ![Part 5 - Transform 1](./assets/part5_transform1.png)
 ![Part 5 - Transform 2](./assets/part5_transform2.png)
+
+## Part 6: Interactive Input Modifiers
+I mapped the arrow keys to World Translation using `mfb_set_keyboard_callback`. Pressing left/right moves the cube horizontally by 10 pixels per keypress, and up/down moves it vertically. This allows direct keyboard control of the cube's position without touching the sliders.
+
+![Part 6 - Keyboard Input](./assets/part6_keyboard.png)

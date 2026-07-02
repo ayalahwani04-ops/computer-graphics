@@ -21,7 +21,10 @@ extern "C" {
 
 static uint32_t g_buffer[WIDTH * HEIGHT];
 static uint32_t g_line_buffer[WIDTH * HEIGHT] = {0};
-static float circle_density = 1.0f;
+static float circle_density = 1.0f;   
+static float world_tx = 0, world_ty = 0;
+static float world_ry = 0;
+static float local_sx = 1, local_sy = 1;
 static bool drawing_line = false;
 static int line_start_x = 0, line_start_y = 0;
 void draw_line(int x0, int y0, int x1, int y1, uint32_t color) {
@@ -143,6 +146,16 @@ static int g_color_shift = 0;
         }
       },
       window);
+  mfb_set_keyboard_callback(
+      [](struct mfb_window *w, mfb_key key, mfb_key_mod mod, bool isPressed) {
+        if (!isPressed) return;
+        if (key == KB_KEY_LEFT)  world_tx -= 10.0f;
+        if (key == KB_KEY_RIGHT) world_tx += 10.0f;
+        if (key == KB_KEY_UP)    world_ty -= 10.0f;
+        if (key == KB_KEY_DOWN)  world_ty += 10.0f;
+      },
+      window);    
+
 
   while (mfb_update_events(window) != MFB_STATE_EXIT) {
     // 1. Input
@@ -167,10 +180,7 @@ static int g_color_shift = 0;
         g_buffer[i] = g_line_buffer[i];
       }
     }
-    // Part 3: Draw wireframe    
-    static float world_tx = 0, world_ty = 0;
-    static float world_ry = 0;
-    static float local_sx = 1, local_sy = 1;
+
     // Part 5: Apply transformations and draw wireframe
     glm::mat4 local = glm::mat4(1.0f);
     local = glm::scale(local, glm::vec3(local_sx, local_sy, 1.0f));
