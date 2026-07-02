@@ -22,6 +22,8 @@ extern "C" {
 static uint32_t g_buffer[WIDTH * HEIGHT];
 static uint32_t g_line_buffer[WIDTH * HEIGHT] = {0};
 static float circle_density = 1.0f;   
+static int show_axes = 0;
+static int show_bbox = 0;
 static float world_tx = 0, world_ty = 0;
 static float world_ry = 0;
 static float local_sx = 1, local_sy = 1;
@@ -204,6 +206,16 @@ static int g_color_shift = 0;
         draw_line_bg((int)t1.x, (int)t1.y, (int)t2.x, (int)t2.y, MFB_RGB(255, 255, 255));
         draw_line_bg((int)t2.x, (int)t2.y, (int)t0.x, (int)t0.y, MFB_RGB(255, 255, 255));
     }
+    // Part 1: Draw coordinate axes
+    if (show_axes) {
+        glm::vec4 origin = final_transform * glm::vec4(0, 0, 0, 1);
+        glm::vec4 x_axis = final_transform * glm::vec4(100, 0, 0, 1);
+        glm::vec4 y_axis = final_transform * glm::vec4(0, 100, 0, 1);
+        glm::vec4 z_axis = final_transform * glm::vec4(0, 0, 100, 1);
+        draw_line_bg((int)origin.x, (int)origin.y, (int)x_axis.x, (int)x_axis.y, MFB_RGB(255, 0, 0));
+        draw_line_bg((int)origin.x, (int)origin.y, (int)y_axis.x, (int)y_axis.y, MFB_RGB(0, 255, 0));
+        draw_line_bg((int)origin.x, (int)origin.y, (int)z_axis.x, (int)z_axis.y, MFB_RGB(0, 0, 255));
+      }
 
     // 3. UI Logic
   
@@ -276,6 +288,14 @@ static int g_color_shift = 0;
       mu_slider(ctx, &local_sx, 0.1f, 3.0f);
       mu_layout_row(ctx, 1, w1, 0);
       mu_slider(ctx, &local_sy, 0.1f, 3.0f);
+
+      // Part 1: Debug toggles
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_label(ctx, "-- Debug --");
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_checkbox(ctx, "Show Axes", &show_axes);
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_checkbox(ctx, "Show Bounding Box", &show_bbox);
 
       // number
       mu_layout_row(ctx, 1, w1, 0);
