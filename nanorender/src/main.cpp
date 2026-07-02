@@ -28,6 +28,7 @@ static float cam_x = 0, cam_y = 0, cam_z = 5.0f;
 static float cam_rx = 0, cam_ry = 0; 
 static int show_axes = 0;
 static int show_bbox = 0;
+static int show_bbox_raster = 0;
 static float world_tx = 0, world_ty = 0;
 static float world_ry = 0;
 static float local_sx = 1, local_sy = 1;
@@ -60,6 +61,11 @@ void draw_line_bg(int x0, int y0, int x1, int y1, uint32_t color) {
         if(e2<=dx){err+=dx; y0+=sy;}
     }
 }
+glm::vec2 to_screen(glm::vec4 clip) {
+    float x = (clip.x / clip.w + 1.0f) * WIDTH / 2.0f;
+    float y = (1.0f - clip.y / clip.w) * HEIGHT / 2.0f;
+    return glm::vec2(x, y);
+}
 // 3D data structures
 struct Vec3 { float x, y, z; };
 struct Face { int a, b, c; };
@@ -85,6 +91,7 @@ void load_obj(const char* filename) {
             ss >> f.a >> f.b >> f.c;
             f.a--; f.b--; f.c--;
             g_faces.push_back(f);
+            
         }
     }
     printf("Loaded: %zu vertices, %zu faces\n", g_vertices.size(), g_faces.size());
@@ -145,7 +152,8 @@ int main() {
   glm::mat4 transform = glm::translate(glm::mat4(1.0f), position);
   printf("GLM works! Position: (%.1f, %.1f, %.1f)\n", position.x, position.y, position.z);
   load_obj("cube.obj");
-  normalize_mesh(WIDTH, HEIGHT);
+  // Scale and center the mesh
+  normalize_mesh(400.0f, 400.0f);
   compute_normals();
   struct mfb_window *window =
       mfb_open_ex("MiniGUI Platform", WIDTH, HEIGHT, MFB_WF_RESIZABLE);
@@ -179,11 +187,10 @@ static int g_color_shift = 0;
       window);
   mfb_set_keyboard_callback(
       [](struct mfb_window *w, mfb_key key, mfb_key_mod mod, bool isPressed) {
-        if (!isPressed) return;
-        if (key == KB_KEY_LEFT)  world_tx -= 10.0f;
-        if (key == KB_KEY_RIGHT) world_tx += 10.0f;
-        if (key == KB_KEY_UP)    world_ty -= 10.0f;
-        if (key == KB_KEY_DOWN)  world_ty += 10.0f;
+       if (key == KB_KEY_LEFT)  world_tx -= 0.1f;
+       if (key == KB_KEY_RIGHT) world_tx += 0.1f;
+       if (key == KB_KEY_UP)    world_ty -= 0.1f;
+       if (key == KB_KEY_DOWN)  world_ty += 0.1f;
       },
       window);    
 
@@ -227,35 +234,97 @@ static int g_color_shift = 0;
     view = glm::translate(view, glm::vec3(-cam_x, -cam_y, -cam_z));
 
    // Part 3: Projection matrix
-    glm::mat4 proj = glm::mat4(1.0f);
-    if (use_perspective) {
-        proj = glm::perspective(glm::radians(60.0f), (float)WIDTH / HEIGHT, 0.1f, 10000.0f);
-    }
-    glm::mat4 final_transform = proj * view * world * local;
+    glm::mat4 proj;
 
+    if (use_perspective)
+   {
+    proj = glm::perspective(
+        glm::radians(60.0f),
+        (float)WIDTH / HEIGHT,
+        0.1f,
+        10000.0f);
+}
+else
+{
+    proj = glm::ortho(
+        -800.0f, 800.0f,
+        -600.0f, 600.0f,
+        0.1f, 10000.0f);
+}
+
+glm::mat4 final_transform = proj * view * world * local;
     for (auto& face : g_faces) {
         Vec3& v0 = g_vertices[face.a];
         Vec3& v1 = g_vertices[face.b];
         Vec3& v2 = g_vertices[face.c];
 
-        glm::vec4 t0 = final_transform * glm::vec4(v0.x, v0.y, v0.z, 1.0f);
-        glm::vec4 t1 = final_transform * glm::vec4(v1.x, v1.y, v1.z, 1.0f);
-        glm::vec4 t2 = final_transform * glm::vec4(v2.x, v2.y, v2.z, 1.0f);
+        glm::vec4 c0 = final_transform * glm::vec4(v0.x, v0.y, v0.z, 1.0f);
+        glm::vec4 c1 = final_transform * glm::vec4(v1.x, v1.y, v1.z, 1.0f);
+        glm::vec4 c2 = final_transform * glm::vec4(v2.x, v2.y, v2.z, 1.0f);
 
-        draw_line_bg((int)t0.x, (int)t0.y, (int)t1.x, (int)t1.y, MFB_RGB(255, 255, 255));
-        draw_line_bg((int)t1.x, (int)t1.y, (int)t2.x, (int)t2.y, MFB_RGB(255, 255, 255));
-        draw_line_bg((int)t2.x, (int)t2.y, (int)t0.x, (int)t0.y, MFB_RGB(255, 255, 255));
+        glm::vec2 s0 = to_screen(c0);
+        glm::vec2 s1 = to_screen(c1);
+        glm::vec2 s2 = to_screen(c2);
+
+        draw_line_bg((int)s0.x, (int)s0.y, (int)s1.x, (int)s1.y, MFB_RGB(255, 255, 255));
+        draw_line_bg((int)s1.x, (int)s1.y, (int)s2.x, (int)s2.y, MFB_RGB(255, 255, 255));
+        draw_line_bg((int)s2.x, (int)s2.y, (int)s0.x, (int)s0.y, MFB_RGB(255, 255, 255));
+    }
+    // hw4 Part 1: Bounding box rasterization
+    if (show_bbox_raster) {
+        srand(42);
+        for (auto& face : g_faces) {
+            Vec3& v0 = g_vertices[face.a];
+            Vec3& v1 = g_vertices[face.b];
+            Vec3& v2 = g_vertices[face.c];
+
+            glm::vec4 c0 = final_transform * glm::vec4(v0.x, v0.y, v0.z, 1.0f);
+            glm::vec4 c1 = final_transform * glm::vec4(v1.x, v1.y, v1.z, 1.0f);
+            glm::vec4 c2 = final_transform * glm::vec4(v2.x, v2.y, v2.z, 1.0f);
+            if (c0.w <= 0 || c1.w <= 0 || c2.w <= 0) continue;
+            glm::vec2 s0 = to_screen(c0);
+            glm::vec2 s1 = to_screen(c1);
+            glm::vec2 s2 = to_screen(c2);
+
+            int minX = std::max(0, (int)std::min({s0.x, s1.x, s2.x}));
+            int maxX = std::min(WIDTH-1, (int)std::max({s0.x, s1.x, s2.x}));
+            int minY = std::max(0, (int)std::min({s0.y, s1.y, s2.y}));
+            int maxY = std::min(HEIGHT-1, (int)std::max({s0.y, s1.y, s2.y}));
+
+            uint32_t color = MFB_RGB(rand()%255, rand()%255, rand()%255);
+            for (int y = minY; y <= maxY; y++)
+                for (int x = minX; x <= maxX; x++)
+                    g_buffer[y * WIDTH + x] = color;
+        }
     }
     // Part 1: Draw coordinate axes
-    if (show_axes) {
-        glm::vec4 origin = final_transform * glm::vec4(0, 0, 0, 1);
-        glm::vec4 x_axis = final_transform * glm::vec4(100, 0, 0, 1);
-        glm::vec4 y_axis = final_transform * glm::vec4(0, 100, 0, 1);
-        glm::vec4 z_axis = final_transform * glm::vec4(0, 0, 100, 1);
-        draw_line_bg((int)origin.x, (int)origin.y, (int)x_axis.x, (int)x_axis.y, MFB_RGB(255, 0, 0));
-        draw_line_bg((int)origin.x, (int)origin.y, (int)y_axis.x, (int)y_axis.y, MFB_RGB(0, 255, 0));
-        draw_line_bg((int)origin.x, (int)origin.y, (int)z_axis.x, (int)z_axis.y, MFB_RGB(0, 0, 255));
-      }
+    if (show_axes)
+{
+    glm::vec4 origin = final_transform * glm::vec4(0, 0, 0, 1);
+    glm::vec4 x_axis = final_transform * glm::vec4(100, 0, 0, 1);
+    glm::vec4 y_axis = final_transform * glm::vec4(0, 100, 0, 1);
+    glm::vec4 z_axis = final_transform * glm::vec4(0, 0, 100, 1);
+
+    if (origin.w > 0 && x_axis.w > 0 && y_axis.w > 0 && z_axis.w > 0)
+    {
+        glm::vec2 so = to_screen(origin);
+        glm::vec2 sx = to_screen(x_axis);
+        glm::vec2 sy = to_screen(y_axis);
+        glm::vec2 sz = to_screen(z_axis);
+
+        draw_line_bg((int)so.x, (int)so.y,
+                     (int)sx.x, (int)sx.y,
+                     MFB_RGB(255, 0, 0));
+
+        draw_line_bg((int)so.x, (int)so.y,
+                     (int)sy.x, (int)sy.y,
+                     MFB_RGB(0, 255, 0));
+
+        draw_line_bg((int)so.x, (int)so.y,
+                     (int)sz.x, (int)sz.y,
+                     MFB_RGB(0, 0, 255));
+    }
+}
       // Part 4: Draw face normals
     // Part 4: Draw face normals
     if (show_normals) {
@@ -263,13 +332,26 @@ static int g_color_shift = 0;
          
 
         glm::vec3 center = g_face_centers[i];
-        glm::vec4 c = final_transform * glm::vec4(center, 1.0f);
-        glm::vec4 tip = final_transform * glm::vec4(
-            center.x + g_face_normals[i].x * 200,
-            center.y + g_face_normals[i].y * 200,
-            center.z + g_face_normals[i].z * 200,
-            1.0f);
-        draw_line_bg((int)c.x, (int)c.y, (int)tip.x, (int)tip.y, MFB_RGB(255, 255, 0));
+
+glm::vec4 c = final_transform * glm::vec4(center, 1.0f);
+glm::vec4 tip = final_transform * glm::vec4(
+    center.x + g_face_normals[i].x * 200,
+    center.y + g_face_normals[i].y * 200,
+    center.z + g_face_normals[i].z * 200,
+    1.0f);
+
+if (c.w > 0 && tip.w > 0)
+{
+    glm::vec2 sc = to_screen(c);
+    glm::vec2 st = to_screen(tip);
+
+    draw_line_bg(
+        (int)sc.x,
+        (int)sc.y,
+        (int)st.x,
+        (int)st.y,
+        MFB_RGB(255,255,0));
+}
     }
 }
 
@@ -322,8 +404,7 @@ static int g_color_shift = 0;
       mu_layout_row(ctx, 1, w1, 0);
       mu_slider(ctx, &cam_y, -1000, 1000);
       mu_layout_row(ctx, 1, w1, 0);
-      mu_slider(ctx, &cam_y, -1000, 1000);
-      mu_layout_row(ctx, 1, w1, 0);
+      mu_slider(ctx, &cam_z, -1000, 1000);
       mu_label(ctx, "-- Camera Rotation --");
       mu_layout_row(ctx, 1, w1, 0);
       mu_slider(ctx, &cam_rx, -3.14f, 3.14f);
@@ -352,9 +433,9 @@ static int g_color_shift = 0;
       mu_layout_row(ctx, 1, w1, 0);
       mu_label(ctx, "-- World Translation --");
       mu_layout_row(ctx, 1, w1, 0);
-      mu_slider(ctx, &world_tx, -800, 800);
+      mu_slider(ctx, &world_tx, -5, 5);
       mu_layout_row(ctx, 1, w1, 0);
-      mu_slider(ctx, &world_ty, -600, 600);
+      mu_slider(ctx, &world_ty, -5, 5);
       mu_layout_row(ctx, 1, w1, 0);
       mu_label(ctx, "-- World Rotation Y --");
       mu_layout_row(ctx, 1, w1, 0);
@@ -373,6 +454,10 @@ static int g_color_shift = 0;
       mu_checkbox(ctx, "Show Axes", &show_axes);
       mu_layout_row(ctx, 1, w1, 0);
       mu_checkbox(ctx, "Show Bounding Box", &show_bbox);
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_label(ctx, "-- hw4 Rasterization --");
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_checkbox(ctx, "Show BBox Raster", &show_bbox_raster);
 
       // number
       mu_layout_row(ctx, 1, w1, 0);
