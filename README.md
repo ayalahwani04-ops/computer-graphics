@@ -72,6 +72,8 @@ To keep the repository clean and the reports professional, follow these standard
 
 | **HW3: Virtual Cameras and Projections** | [View Report](./nanorender/hw3_report.md) |
 
+| **HW4: Triangle Rasterization and Depth Buffering** | [View Report](./nanorender/hw4_report.md) |
+
 
 ---
 *Note: Please ensure all internal links remain functional as you add new folders.*
