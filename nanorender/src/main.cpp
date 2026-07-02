@@ -157,6 +157,7 @@ void normalize_mesh(float screen_width, float screen_height) {
 struct Normal { float x, y, z; };
 std::vector<Normal> g_face_normals;
 std::vector<glm::vec3> g_face_centers;
+std::vector<glm::vec3> g_vertex_normals;
 
 void compute_normals() {
     g_face_normals.clear();
@@ -178,6 +179,17 @@ void compute_normals() {
         ));
     }
 }
+void compute_vertex_normals() {
+    g_vertex_normals.assign(g_vertices.size(), glm::vec3(0.0f));
+    for (int i = 0; i < (int)g_faces.size(); i++) {
+        glm::vec3 n(g_face_normals[i].x, g_face_normals[i].y, g_face_normals[i].z);
+        g_vertex_normals[g_faces[i].a] += n;
+        g_vertex_normals[g_faces[i].b] += n;
+        g_vertex_normals[g_faces[i].c] += n;
+    }
+    for (auto& n : g_vertex_normals)
+        n = glm::normalize(n);
+}
 
 int main() {
   // GLM demo - Part 0
@@ -188,6 +200,7 @@ int main() {
   // Scale and center the mesh
   normalize_mesh(400.0f, 400.0f);
   compute_normals();
+  compute_vertex_normals();
   struct mfb_window *window =
       mfb_open_ex("MiniGUI Platform", WIDTH, HEIGHT, MFB_WF_RESIZABLE);
   if (!window)
@@ -364,6 +377,77 @@ glm::mat4 final_transform = proj * view * world * local;
                         if (z < g_zbuffer[idx]) {
                             g_zbuffer[idx] = z;
                             g_buffer[idx] = color;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // hw5 Part 4: Phong shading (per-pixel)
+    if (show_phong) {
+        glm::vec3 cam_pos = glm::vec3(cam_x, cam_y, cam_z);
+        for (int fi = 0; fi < (int)g_faces.size(); fi++) {
+            Vec3& v0 = g_vertices[g_faces[fi].a];
+            Vec3& v1 = g_vertices[g_faces[fi].b];
+            Vec3& v2 = g_vertices[g_faces[fi].c];
+
+            glm::vec4 c0 = final_transform * glm::vec4(v0.x, v0.y, v0.z, 1.0f);
+            glm::vec4 c1 = final_transform * glm::vec4(v1.x, v1.y, v1.z, 1.0f);
+            glm::vec4 c2 = final_transform * glm::vec4(v2.x, v2.y, v2.z, 1.0f);
+            if (c0.w <= 0 || c1.w <= 0 || c2.w <= 0) continue;
+
+            glm::vec2 s0 = to_screen(c0);
+            glm::vec2 s1 = to_screen(c1);
+            glm::vec2 s2 = to_screen(c2);
+
+            glm::vec3 n0 = g_vertex_normals[g_faces[fi].a];
+            glm::vec3 n1 = g_vertex_normals[g_faces[fi].b];
+            glm::vec3 n2 = g_vertex_normals[g_faces[fi].c];
+
+            glm::vec3 p0(v0.x, v0.y, v0.z);
+            glm::vec3 p1(v1.x, v1.y, v1.z);
+            glm::vec3 p2(v2.x, v2.y, v2.z);
+
+            int minX = std::max(0, (int)std::min({s0.x, s1.x, s2.x}));
+            int maxX = std::min(WIDTH-1, (int)std::max({s0.x, s1.x, s2.x}));
+            int minY = std::max(0, (int)std::min({s0.y, s1.y, s2.y}));
+            int maxY = std::min(HEIGHT-1, (int)std::max({s0.y, s1.y, s2.y}));
+
+            float denom = (s1.y - s2.y) * (s0.x - s2.x) + (s2.x - s1.x) * (s0.y - s2.y);
+            if (abs(denom) < 0.0001f) continue;
+
+            for (int y = minY; y <= maxY; y++) {
+                for (int x = minX; x <= maxX; x++) {
+                    float alpha = ((s1.y - s2.y) * (x - s2.x) + (s2.x - s1.x) * (y - s2.y)) / denom;
+                    float beta  = ((s2.y - s0.y) * (x - s2.x) + (s0.x - s2.x) * (y - s2.y)) / denom;
+                    float gamma = 1.0f - alpha - beta;
+                    if (alpha >= 0 && beta >= 0 && gamma >= 0) {
+                        float z = alpha * (c0.z/c0.w) + beta * (c1.z/c1.w) + gamma * (c2.z/c2.w);
+                        int idx = y * WIDTH + x;
+                        if (z < g_zbuffer[idx]) {
+                            g_zbuffer[idx] = z;
+
+                            // Interpolate normal and position
+                            glm::vec3 normal = glm::normalize(alpha * n0 + beta * n1 + gamma * n2);
+                            glm::vec3 pos = alpha * p0 + beta * p1 + gamma * p2;
+
+                            // Lighting
+                            glm::vec3 light_dir = glm::normalize(g_light.position - pos);
+                            glm::vec3 view_dir = glm::normalize(cam_pos - pos);
+                            glm::vec3 reflect_dir = glm::reflect(-light_dir, normal);
+
+                            glm::vec3 ambient = g_light.ambient * g_material.ambient;
+                            float diff = std::max(glm::dot(normal, light_dir), 0.0f);
+                            glm::vec3 diffuse = diff * g_light.diffuse * g_material.diffuse;
+                            float spec = std::pow(std::max(glm::dot(view_dir, reflect_dir), 0.0f), g_material.shininess);
+                            glm::vec3 specular = spec * g_light.specular * g_material.specular;
+
+                            glm::vec3 result = glm::clamp(ambient + diffuse + specular, 0.0f, 1.0f);
+                            g_buffer[idx] = MFB_RGB(
+                                (uint8_t)(result.r * 255),
+                                (uint8_t)(result.g * 255),
+                                (uint8_t)(result.b * 255)
+                            );
                         }
                     }
                 }

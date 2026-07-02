@@ -19,3 +19,9 @@ The result shows a bright highlight on the face that reflects light directly tow
 
 ![Part 3 - Specular](./assets/part3_specular.png)
 
+## Part 4: Phong Shading (Per-Pixel Shading)
+I implemented Phong shading by calculating the full lighting equation for every single pixel. For each pixel, I use barycentric coordinates to interpolate the vertex normals and 3D position. Then I calculate ambient + diffuse + specular lighting using the interpolated normal and position.
+
+The result is dramatically smoother than flat shading — the cube looks like a real 3D rounded object with a beautiful specular highlight. The edges between faces are completely invisible.
+
+![Part 4 - Phong Shading](./assets/part4_phong.png)
