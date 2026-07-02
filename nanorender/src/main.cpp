@@ -2,6 +2,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 extern "C" {
 #include "microui.h"
@@ -33,6 +35,10 @@ void draw_line(int x0, int y0, int x1, int y1, uint32_t color) {
 }
 
 int main() {
+  // GLM demo - Part 0
+  glm::vec3 position(1.0f, 2.0f, 3.0f);
+  glm::mat4 transform = glm::translate(glm::mat4(1.0f), position);
+  printf("GLM works! Position: (%.1f, %.1f, %.1f)\n", position.x, position.y, position.z);
   struct mfb_window *window =
       mfb_open_ex("MiniGUI Platform", WIDTH, HEIGHT, MFB_WF_RESIZABLE);
   if (!window)
