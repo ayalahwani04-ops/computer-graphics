@@ -12,3 +12,10 @@ The result shows the cube with realistic shading — faces pointing toward the l
 
 ![Part 2 - Flat Shading](./assets/part2_flat_shading.png)
 
+## Part 3: Specular Highlights
+I added the specular component using the reflection vector. For each face, I calculate the reflection of the light direction against the face normal using `glm::reflect`. Then I compute the dot product between the reflection vector and the view direction (camera direction). Raising this to the power of the material's shininess gives a concentrated bright highlight.
+
+The result shows a bright highlight on the face that reflects light directly toward the camera. Moving the light position sliders changes where the highlight appears.
+
+![Part 3 - Specular](./assets/part3_specular.png)
+
