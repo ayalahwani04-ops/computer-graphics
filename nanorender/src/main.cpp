@@ -4,6 +4,10 @@
 #include <stdlib.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <string>
 
 extern "C" {
 #include "microui.h"
@@ -33,12 +37,42 @@ void draw_line(int x0, int y0, int x1, int y1, uint32_t color) {
     if (e2 <= dx) { err += dx; y0 += sy; }
   }
 }
+// 3D data structures
+struct Vec3 { float x, y, z; };
+struct Face { int a, b, c; };
+
+std::vector<Vec3> g_vertices;
+std::vector<Face> g_faces;
+
+void load_obj(const char* filename) {
+    g_vertices.clear();
+    g_faces.clear();
+    std::ifstream file(filename);
+    std::string line;
+    while (std::getline(file, line)) {
+        std::istringstream ss(line);
+        std::string type;
+        ss >> type;
+        if (type == "v") {
+            Vec3 v;
+            ss >> v.x >> v.y >> v.z;
+            g_vertices.push_back(v);
+        } else if (type == "f") {
+            Face f;
+            ss >> f.a >> f.b >> f.c;
+            f.a--; f.b--; f.c--;
+            g_faces.push_back(f);
+        }
+    }
+    printf("Loaded: %zu vertices, %zu faces\n", g_vertices.size(), g_faces.size());
+}
 
 int main() {
   // GLM demo - Part 0
   glm::vec3 position(1.0f, 2.0f, 3.0f);
   glm::mat4 transform = glm::translate(glm::mat4(1.0f), position);
   printf("GLM works! Position: (%.1f, %.1f, %.1f)\n", position.x, position.y, position.z);
+  load_obj("cube.obj");
   struct mfb_window *window =
       mfb_open_ex("MiniGUI Platform", WIDTH, HEIGHT, MFB_WF_RESIZABLE);
   if (!window)
@@ -125,6 +159,11 @@ static int g_color_shift = 0;
       if (mu_button(ctx, "Say Hello!")) {
         printf("Hello from my custom button!\n");
     }
+      // Part 1: Show mesh info
+      mu_layout_row(ctx, 1, w1, 0);
+      char mesh_info[64];
+      snprintf(mesh_info, sizeof(mesh_info), "Vertices: %zu  Faces: %zu", g_vertices.size(), g_faces.size());
+      mu_label(ctx, mesh_info);
       // checkbox
       mu_layout_row(ctx, 1, w1, 0);
       mu_checkbox(ctx, "mu_checkbox A (off)", &checkbox_a);
