@@ -167,24 +167,38 @@ static int g_color_shift = 0;
         g_buffer[i] = g_line_buffer[i];
       }
     }
-    // Part 3: Draw wireframe
+    // Part 3: Draw wireframe    
+    static float world_tx = 0, world_ty = 0;
+    static float world_ry = 0;
+    static float local_sx = 1, local_sy = 1;
+    // Part 5: Apply transformations and draw wireframe
+    glm::mat4 local = glm::mat4(1.0f);
+    local = glm::scale(local, glm::vec3(local_sx, local_sy, 1.0f));
+
+    glm::mat4 world = glm::mat4(1.0f);
+    world = glm::rotate(world, world_ry, glm::vec3(0, 1, 0));
+    world = glm::translate(world, glm::vec3(world_tx, world_ty, 0));
+
+    glm::mat4 final_transform = world * local;
+
     for (auto& face : g_faces) {
         Vec3& v0 = g_vertices[face.a];
         Vec3& v1 = g_vertices[face.b];
         Vec3& v2 = g_vertices[face.c];
-        draw_line_bg((int)v0.x, (int)v0.y, (int)v1.x, (int)v1.y, MFB_RGB(255, 255, 255));
-        draw_line_bg((int)v1.x, (int)v1.y, (int)v2.x, (int)v2.y, MFB_RGB(255, 255, 255));
-        draw_line_bg((int)v2.x, (int)v2.y, (int)v0.x, (int)v0.y, MFB_RGB(255, 255, 255));
+
+        glm::vec4 t0 = final_transform * glm::vec4(v0.x, v0.y, v0.z, 1.0f);
+        glm::vec4 t1 = final_transform * glm::vec4(v1.x, v1.y, v1.z, 1.0f);
+        glm::vec4 t2 = final_transform * glm::vec4(v2.x, v2.y, v2.z, 1.0f);
+
+        draw_line_bg((int)t0.x, (int)t0.y, (int)t1.x, (int)t1.y, MFB_RGB(255, 255, 255));
+        draw_line_bg((int)t1.x, (int)t1.y, (int)t2.x, (int)t2.y, MFB_RGB(255, 255, 255));
+        draw_line_bg((int)t2.x, (int)t2.y, (int)t0.x, (int)t0.y, MFB_RGB(255, 255, 255));
     }
-     
 
     // 3. UI Logic
   
 
     static float slider_val = 50.0f;
-    static float world_tx = 0, world_ty = 0;
-    static float world_ry = 0;
-    static float local_sx = 1, local_sy = 1;
     static float number_val = 3.14f;
     static int checkbox_a = 0;
     static int checkbox_b = 1;

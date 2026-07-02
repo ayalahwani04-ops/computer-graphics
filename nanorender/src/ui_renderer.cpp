@@ -127,7 +127,7 @@ void UIRenderer::draw_rect(mu_Rect rect, mu_Color color) {
     int x2 = std::min({rect.x + rect.w, m_clip_rect.x + m_clip_rect.w, m_width});
     int y2 = std::min({rect.y + rect.h, m_clip_rect.y + m_clip_rect.h, m_height});
 
-    int glitch_offset = 10; // shift everything 10px to the right
+    int glitch_offset = 0; // shift everything 10px to the right
 
     for (int y = y1; y < y2; y++) {
         for (int x = x1; x < x2; x++) {
