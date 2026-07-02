@@ -176,21 +176,15 @@ static int g_color_shift = 0;
         draw_line_bg((int)v1.x, (int)v1.y, (int)v2.x, (int)v2.y, MFB_RGB(255, 255, 255));
         draw_line_bg((int)v2.x, (int)v2.y, (int)v0.x, (int)v0.y, MFB_RGB(255, 255, 255));
     }
-      // Part 3: Draw wireframe
-    for (auto& face : g_faces) {
-        Vec3& v0 = g_vertices[face.a];
-        Vec3& v1 = g_vertices[face.b];
-        Vec3& v2 = g_vertices[face.c];
-    // Orthographic projection - just drop z
-        draw_line((int)v0.x, (int)v0.y, (int)v1.x, (int)v1.y, MFB_RGB(255, 255, 255));
-        draw_line((int)v1.x, (int)v1.y, (int)v2.x, (int)v2.y, MFB_RGB(255, 255, 255));
-        draw_line((int)v2.x, (int)v2.y, (int)v0.x, (int)v0.y, MFB_RGB(255, 255, 255));
-    }
+     
 
     // 3. UI Logic
   
 
     static float slider_val = 50.0f;
+    static float world_tx = 0, world_ty = 0;
+    static float world_ry = 0;
+    static float local_sx = 1, local_sy = 1;
     static float number_val = 3.14f;
     static int checkbox_a = 0;
     static int checkbox_b = 1;
@@ -241,6 +235,23 @@ static int g_color_shift = 0;
       mu_layout_row(ctx, 1, w1, 0);
       mu_label(ctx, "Circle density:");
       mu_slider(ctx, &circle_density, 0.1f, 5.0f);
+      // Part 4: Transformation sliders
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_label(ctx, "-- World Translation --");
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_slider(ctx, &world_tx, -800, 800);
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_slider(ctx, &world_ty, -600, 600);
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_label(ctx, "-- World Rotation Y --");
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_slider(ctx, &world_ry, -3.14f, 3.14f);
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_label(ctx, "-- Local Scale --");
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_slider(ctx, &local_sx, 0.1f, 3.0f);
+      mu_layout_row(ctx, 1, w1, 0);
+      mu_slider(ctx, &local_sy, 0.1f, 3.0f);
 
       // number
       mu_layout_row(ctx, 1, w1, 0);
